@@ -1,4 +1,7 @@
-﻿namespace API.Extensions;
+﻿using FluentValidation;
+using FluentValidation.AspNetCore;
+
+namespace API.Extensions;
 
 using Application.Activities;
 using Application.Core;
@@ -28,6 +31,8 @@ public static class ApplicationServiceExtensions
         
         services.AddMediatR(typeof(List.Handler));
         services.AddAutoMapper(typeof(MappingProfiles).Assembly);
+        services.AddFluentValidationAutoValidation();
+        services.AddValidatorsFromAssemblyContaining<Create>();
 
         // Manually registering service:
         // services.AddScoped(typeof(IRequestHandler<Edit.Command>), 
