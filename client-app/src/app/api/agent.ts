@@ -45,7 +45,8 @@ axios.interceptors.response.use(async response => {
             toast.error('forbidden')
             break;
         case 404:
-            toast.error('not found')
+            toast.error('not found');
+            router.navigate('/not-found');
             break;
         case 500:
             // toast.error('server error')
