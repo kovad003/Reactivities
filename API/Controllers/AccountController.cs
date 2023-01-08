@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using API.DTOs;
 using API.Services;
 using Domain;
@@ -7,91 +7,89 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace API.Controllers;
-
-// [AllowAnonymous] // EndPoints listed here no longer need auth.
-[ApiController]
-[Route("api/[controller]")]
-public class AccountController : ControllerBase
+namespace API.Controllers
 {
-    private readonly UserManager<AppUser> _userManager;
-    private readonly TokenService _tokenService;
-
-    public AccountController(UserManager<AppUser> userManager, TokenService tokenService)
+    [ApiController]
+    [Route("api/[controller]")]
+    public class AccountController : ControllerBase
     {
-        _userManager = userManager;
-        _tokenService = tokenService;
-    }
-
-    [AllowAnonymous]
-    [HttpPost("login")]
-    public async Task<ActionResult<UserDto>> Login(LoginDto loginDto)
-    {
-        var user = await _userManager.FindByEmailAsync(loginDto.Email);
-
-        if (user == null) return Unauthorized();
-
-        var result = await _userManager.CheckPasswordAsync(user, loginDto.Password);
-
-        if (result)
-            return CreateUserObject(user);
-
-        return Unauthorized();
-    }
-
-    [AllowAnonymous]
-    [HttpPost("register")]
-    public async Task<ActionResult<UserDto>> Register(RegisterDto registerDto)
-    {
-        if (await _userManager.Users.AnyAsync(x => x.Email == registerDto.Email))
+        private readonly UserManager<AppUser> _userManager;
+        private readonly TokenService _tokenService;
+        public AccountController(UserManager<AppUser> userManager, TokenService tokenService)
         {
-            ModelState.AddModelError("email", "Email taken");
-            // return BadRequest(ModelState);
-            // By using the ValidationProblem() instead of BadReq() we will receive
-            // an object containing all info, incl. status (400) and our custom err msg.
-            return ValidationProblem();
+            _tokenService = tokenService;
+            _userManager = userManager;
         }
 
-        if (await _userManager.Users.AnyAsync(x => x.UserName == registerDto.UserName))
+        [AllowAnonymous]
+        [HttpPost("login")]
+        public async Task<ActionResult<UserDto>> Login(LoginDto loginDto)
         {
-            ModelState.AddModelError("username", "Username taken");
-            // return BadRequest(ModelState);
-            return ValidationProblem();
+            var user = await _userManager.FindByEmailAsync(loginDto.Email);
+
+            if (user == null) return Unauthorized();
+
+            var result = await _userManager.CheckPasswordAsync(user, loginDto.Password);
+
+            if (result)
+            {
+                return CreateUserObject(user);
+            }
+
+            return Unauthorized();
         }
 
-        var user = new AppUser
+        [AllowAnonymous]
+        [HttpPost("register")]
+        public async Task<ActionResult<UserDto>> Register(RegisterDto registerDto)
         {
-            DisplayName = registerDto.DisplayName,
-            Email = registerDto.Email,
-            UserName = registerDto.UserName
-        };
+            if (await _userManager.Users.AnyAsync(x => x.UserName == registerDto.Username))
+            {
+                ModelState.AddModelError("username", "Username taken");
+                return ValidationProblem();
+            }
 
-        var result = await _userManager.CreateAsync(user, registerDto.Password);
+            if (await _userManager.Users.AnyAsync(x => x.Email == registerDto.Email))
+            {
+                ModelState.AddModelError("email", "Email taken");
+                return ValidationProblem();
+            }
 
-        if (result.Succeeded)
+            var user = new AppUser
+            {
+                DisplayName = registerDto.DisplayName,
+                Email = registerDto.Email,
+                UserName = registerDto.Username
+            };
+
+            var result = await _userManager.CreateAsync(user, registerDto.Password);
+
+            if (result.Succeeded)
+            {
+                return CreateUserObject(user);
+            }
+
+            return BadRequest(result.Errors);
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<ActionResult<UserDto>> GetCurrentUser()
+        {
+            var user = await _userManager.FindByEmailAsync(User.FindFirstValue(ClaimTypes.Email));
+
             return CreateUserObject(user);
-        
-        return BadRequest(result.Errors);
-    }
+        }
 
-    [Authorize]
-    [HttpGet]
-    public async Task<ActionResult<UserDto>> GetCurrentUser()
-    {
-        var user = await _userManager.FindByEmailAsync(User.FindFirstValue(ClaimTypes.Email));
-        
-        return CreateUserObject(user);
-    }
-    
-    /* PRIVATE METHODS: */
-    private UserDto CreateUserObject(AppUser user)
-    {
-        return new UserDto
+        private UserDto CreateUserObject(AppUser user)
         {
-            DisplayName = user.DisplayName,
-            Image = null,
-            Token = _tokenService.CreateToken(user),
-            Username = user.UserName
-        };
+            return new UserDto
+            {
+                DisplayName = user.DisplayName,
+                Image = null,
+                Token = _tokenService.CreateToken(user),
+                Username = user.UserName
+            };
+        }
     }
 }
