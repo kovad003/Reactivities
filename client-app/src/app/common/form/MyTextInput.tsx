@@ -6,12 +6,13 @@ interface Props {
     placeholder: string;
     name: string;
     label?: string;
+    type?: string;
 }
 
-export default function MyTextInput(props: Props){
+export default function MyTextInput(props: Props) {
     // Will tide up the matching fields that are
     // used for the text input in the form:
-    const [field, meta] = useField((props.name));
+    const [field, meta] = useField(props.name);
 
     return(
         <Form.Field error={meta.touched && !!meta.error}>

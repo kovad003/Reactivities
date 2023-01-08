@@ -43,14 +43,20 @@ public class AccountController : ControllerBase
     [HttpPost("register")]
     public async Task<ActionResult<UserDto>> Register(RegisterDto registerDto)
     {
-        if (await _userManager.Users.AnyAsync(x => x.UserName == registerDto.UserName))
-        {
-            return BadRequest("Username is already taken");
-        }
-        
         if (await _userManager.Users.AnyAsync(x => x.Email == registerDto.Email))
         {
-            return BadRequest("Email is already taken");
+            ModelState.AddModelError("email", "Email taken");
+            // return BadRequest(ModelState);
+            // By using the ValidationProblem() instead of BadReq() we will receive
+            // an object containing all info, incl. status (400) and our custom err msg.
+            return ValidationProblem();
+        }
+
+        if (await _userManager.Users.AnyAsync(x => x.UserName == registerDto.UserName))
+        {
+            ModelState.AddModelError("username", "Username taken");
+            // return BadRequest(ModelState);
+            return ValidationProblem();
         }
 
         var user = new AppUser
